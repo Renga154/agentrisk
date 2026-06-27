@@ -4,6 +4,8 @@
 [![npm](https://img.shields.io/npm/v/agentrisk.svg)](https://www.npmjs.com/package/agentrisk)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
+[English](README.md) | [日本語](README.ja.md)
+
 Zero-execution preflight scanning for untrusted AI-agent and MCP artifacts.
 
 AgentRisk scans a repository, GitHub URL, npm package, or tarball before an AI coding agent, MCP server, or install script gets a chance to run. It reads high-signal configuration and instruction files, normalizes them into typed artifacts, evaluates deterministic rules, and emits Terminal, JSON, Markdown, or SARIF reports.
