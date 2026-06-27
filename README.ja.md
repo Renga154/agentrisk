@@ -1,7 +1,7 @@
 # AgentRisk
 
 [![CI](https://github.com/Renga154/agentrisk/actions/workflows/ci.yml/badge.svg)](https://github.com/Renga154/agentrisk/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/agentrisk.svg)](https://www.npmjs.com/package/agentrisk)
+[![Version](https://img.shields.io/github/package-json/v/Renga154/agentrisk?label=version)](package.json)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 [English](README.md) | [日本語](README.ja.md)
@@ -13,9 +13,9 @@ AgentRisk は、AI コーディングエージェント、MCP サーバー、イ
 MCP サーバーには接続しません。package script は実行しません。対象の依存関係はインストールしません。ワークスペースが安全かどうかを LLM に判定させることもありません。
 
 ```bash
-npx agentrisk scan https://github.com/owner/suspicious-agent-repo
-npx agentrisk scan npm:some-mcp-server@1.2.3
-npx agentrisk scan ./downloaded-agent.tgz
+npm exec --yes github:Renga154/agentrisk -- scan https://github.com/owner/suspicious-agent-repo
+npm exec --yes github:Renga154/agentrisk -- scan npm:some-mcp-server@1.2.3
+npm exec --yes github:Renga154/agentrisk -- scan ./downloaded-agent.tgz
 ```
 
 ```text
@@ -83,8 +83,8 @@ AgentRisk は現在、次のファイルを検出します。
 ルールパックを確認するには、次を実行してください。
 
 ```bash
-npx agentrisk rules list
-npx agentrisk rules show mcp-remote-fetch-exec
+npm exec --yes github:Renga154/agentrisk -- rules list
+npm exec --yes github:Renga154/agentrisk -- rules show mcp-remote-fetch-exec
 ```
 
 同梱 corpus では現在、**benign 3/3 clean**、**malicious 5/5 detected** です。詳細は `npm run corpus:evaluate` で生成される [docs/corpus-report.md](docs/corpus-report.md) を参照してください。
@@ -94,29 +94,37 @@ npx agentrisk rules show mcp-remote-fetch-exec
 インストールせずに使う場合:
 
 ```bash
-npx agentrisk scan .
+npm exec --yes github:Renga154/agentrisk -- scan .
 ```
+
+npm package の公開後は、同じコマンドを `npx agentrisk scan ...` に短縮できます。
 
 リモートアーティファクトのプリフライト:
 
 ```bash
 # GitHub repo default branch
-npx agentrisk scan https://github.com/modelcontextprotocol/servers
+npm exec --yes github:Renga154/agentrisk -- scan https://github.com/modelcontextprotocol/servers
 
 # GitHub shorthand with a ref
-npx agentrisk scan github:owner/repo#v1.2.3
+npm exec --yes github:Renga154/agentrisk -- scan github:owner/repo#v1.2.3
 
 # npm package tarball, downloaded and extracted without running scripts
-npx agentrisk scan npm:some-mcp-server@1.2.3
+npm exec --yes github:Renga154/agentrisk -- scan npm:some-mcp-server@1.2.3
 
 # Local or remote tarballs
-npx agentrisk scan ./agent-server.tgz
-npx agentrisk scan https://example.com/agent-server.tar.gz
+npm exec --yes github:Renga154/agentrisk -- scan ./agent-server.tgz
+npm exec --yes github:Renga154/agentrisk -- scan https://example.com/agent-server.tar.gz
 ```
 
 remote / npm / archive target では、`--config` を明示しない限り、対象物に含まれる `agentrisk.config.json` は無視されます。信頼していないアーティファクト自身に、スキャン設定を弱める権限を与えないためです。
 
 ## インストール
+
+まだ npm package を公開していない場合は、GitHub から直接実行できます。
+
+```bash
+npm exec --yes github:Renga154/agentrisk -- scan .
+```
 
 グローバルインストール:
 
@@ -225,7 +233,7 @@ jobs:
           sarif_file: agentrisk.sarif
 ```
 
-npm package を直接実行する場合:
+npm package 公開後に直接実行する場合:
 
 ```yaml
 name: AgentRisk
