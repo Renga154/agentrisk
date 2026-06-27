@@ -1,0 +1,27 @@
+name: Rule request
+description: Suggest a new deterministic rule
+title: "[Rule]: "
+labels: ["rule-request"]
+body:
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk pattern
+      description: What should AgentRisk detect?
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: Include malicious and benign examples if possible.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Why this belongs in a static zero-execution scanner
+    validations:
+      required: true
+

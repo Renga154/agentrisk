@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "reviewed-server": {
+      "command": "node",
+      "args": ["./vendor/reviewed-server/index.js"],
+      "env": {
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}
+

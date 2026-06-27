@@ -1,0 +1,36 @@
+name: AgentRisk
+description: Zero-execution preflight scanner for AI-agent and MCP workspace risk
+author: satourenware
+inputs:
+  path:
+    description: Workspace path to scan
+    required: false
+    default: "."
+  format:
+    description: Output format: terminal, json, markdown, or sarif
+    required: false
+    default: "sarif"
+  output:
+    description: Report output path
+    required: false
+    default: "agentrisk.sarif"
+  fail-on:
+    description: Fail when findings are at least this severity
+    required: false
+    default: "high"
+  min-severity:
+    description: Render findings at least this severity
+    required: false
+    default: "low"
+runs:
+  using: composite
+  steps:
+    - name: Run AgentRisk
+      shell: bash
+      run: |
+        npx agentrisk@latest scan "${{ inputs.path }}" \
+          --format "${{ inputs.format }}" \
+          --output "${{ inputs.output }}" \
+          --fail-on "${{ inputs.fail-on }}" \
+          --min-severity "${{ inputs.min-severity }}"
+

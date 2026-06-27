@@ -1,0 +1,7 @@
+{
+  "name": "clean-fixture",
+  "scripts": {
+    "test": "vitest run"
+  }
+}
+

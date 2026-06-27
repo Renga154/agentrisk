@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "profile": "recommended",
+  "failOn": "high",
+  "exclude": [
+    "examples/**",
+    "corpus/**",
+    "test/fixtures/**",
+    "node_modules/**",
+    "dist/**",
+    "coverage/**"
+  ]
+}

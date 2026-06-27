@@ -1,0 +1,62 @@
+import { describe, expect, it } from "vitest";
+import path from "node:path";
+import { loadConfig } from "../../src/config/load-config.js";
+import { scanWorkspace } from "../../src/engine/scan-workspace.js";
+import { renderSarif } from "../../src/renderers/sarif.js";
+
+const fixtures = path.resolve("test/fixtures");
+
+describe("scanWorkspace", () => {
+  it("returns no findings for the clean fixture", async () => {
+    const config = await loadConfig({ rootPath: path.join(fixtures, "clean-repo") });
+    const result = await scanWorkspace(config);
+
+    expect(result.summary.totalFindings).toBe(0);
+    expect(result.diagnostics.filter((diagnostic) => diagnostic.kind === "parse_error")).toHaveLength(0);
+  });
+
+  it("detects high-signal MCP, package, and instruction risks", async () => {
+    const config = await loadConfig({ rootPath: path.join(fixtures, "risky-mcp") });
+    const result = await scanWorkspace(config);
+
+    expect(result.findings.map((finding) => finding.ruleId)).toEqual(
+      expect.arrayContaining([
+        "mcp-remote-fetch-exec",
+        "mcp-shell-wrapper-command",
+        "mcp-sensitive-env-pass-through",
+        "mcp-unpinned-dlx",
+        "package-postinstall-remote-exec",
+        "package-script-shell-trampoline",
+        "instruction-secret-exfiltration",
+        "instruction-approval-bypass",
+        "instruction-policy-override"
+      ])
+    );
+    expect(result.summary.bySeverity.critical).toBeGreaterThanOrEqual(2);
+  });
+
+  it("keeps malformed JSON as diagnostics", async () => {
+    const config = await loadConfig({ rootPath: path.join(fixtures, "malformed-json") });
+    const result = await scanWorkspace(config);
+
+    expect(result.diagnostics.some((diagnostic) => diagnostic.kind === "parse_error")).toBe(true);
+  });
+
+  it("detects conflicting workspace instructions", async () => {
+    const config = await loadConfig({ rootPath: path.join(fixtures, "conflicting-instructions") });
+    const result = await scanWorkspace(config);
+
+    expect(result.findings.map((finding) => finding.ruleId)).toContain("conflicting-agent-instructions");
+  });
+
+  it("renders valid-looking SARIF 2.1.0", async () => {
+    const config = await loadConfig({ rootPath: path.join(fixtures, "risky-mcp") });
+    const result = await scanWorkspace(config);
+    const sarif = JSON.parse(renderSarif(result));
+
+    expect(sarif.version).toBe("2.1.0");
+    expect(sarif.runs[0].tool.driver.rules.length).toBeGreaterThan(0);
+    expect(sarif.runs[0].results.length).toBe(result.findings.length);
+  });
+});
+
