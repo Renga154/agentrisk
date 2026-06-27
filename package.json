@@ -12,7 +12,7 @@
     "url": "https://github.com/Renga154/agentrisk/issues"
   },
   "bin": {
-    "agentrisk": "./dist/cli.cjs"
+    "agentrisk": "dist/cli.cjs"
   },
   "files": [
     "dist",
