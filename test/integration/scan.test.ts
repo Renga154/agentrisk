@@ -40,6 +40,7 @@ describe("scanWorkspace", () => {
     const result = await scanWorkspace(config);
 
     expect(result.diagnostics.some((diagnostic) => diagnostic.kind === "parse_error")).toBe(true);
+    expect(result.summary.incomplete).toBe(true);
   });
 
   it("detects conflicting workspace instructions", async () => {
@@ -47,6 +48,26 @@ describe("scanWorkspace", () => {
     const result = await scanWorkspace(config);
 
     expect(result.findings.map((finding) => finding.ruleId)).toContain("conflicting-agent-instructions");
+  });
+
+  it("detects launch-chain provenance risks", async () => {
+    const config = await loadConfig({ rootPath: path.join(fixtures, "launch-chain") });
+    const result = await scanWorkspace(config);
+
+    expect(result.findings.map((finding) => finding.ruleId)).toEqual(
+      expect.arrayContaining([
+        "mcp-privileged-container",
+        "mcp-external-binary-reference",
+        "mcp-unpinned-dlx"
+      ])
+    );
+  });
+
+  it("treats SKILL.md as an agent instruction artifact", async () => {
+    const config = await loadConfig({ rootPath: path.join(fixtures, "skill-doc") });
+    const result = await scanWorkspace(config);
+
+    expect(result.findings.map((finding) => finding.ruleId)).toContain("instruction-secret-exfiltration");
   });
 
   it("renders valid-looking SARIF 2.1.0", async () => {
@@ -58,5 +79,13 @@ describe("scanWorkspace", () => {
     expect(sarif.runs[0].tool.driver.rules.length).toBeGreaterThan(0);
     expect(sarif.runs[0].results.length).toBe(result.findings.length);
   });
-});
 
+  it("emits SARIF notifications for incomplete scans", async () => {
+    const config = await loadConfig({ rootPath: path.join(fixtures, "malformed-json") });
+    const result = await scanWorkspace(config);
+    const sarif = JSON.parse(renderSarif(result));
+
+    expect(sarif.runs[0].invocations[0].executionSuccessful).toBe(false);
+    expect(sarif.runs[0].invocations[0].toolExecutionNotifications[0].message.text).toContain("parse_error");
+  });
+});

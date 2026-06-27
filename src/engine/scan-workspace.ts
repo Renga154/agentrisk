@@ -4,8 +4,9 @@ import type { ResolvedConfig } from "../config/schema.js";
 import { discoverFiles } from "../discovery/targets.js";
 import { evaluateRules } from "./evaluate-rules.js";
 import { TOOL_NAME, VERSION } from "../version.js";
+import type { TargetSource } from "../targets/types.js";
 
-export async function scanWorkspace(config: ResolvedConfig): Promise<ScanResult> {
+export async function scanWorkspace(config: ResolvedConfig, source?: TargetSource): Promise<ScanResult> {
   const discovery = await discoverFiles(config);
   const artifactResult = await buildArtifacts(discovery.files, config);
   const evaluation = evaluateRules(artifactResult.artifacts, config);
@@ -30,11 +31,20 @@ export async function scanWorkspace(config: ResolvedConfig): Promise<ScanResult>
     bySeverity[finding.severity] += 1;
   }
 
+  const parseErrors = diagnostics.filter((diagnostic) => diagnostic.kind === "parse_error").length;
+  const readErrors = diagnostics.filter((diagnostic) => diagnostic.kind === "read_error").length;
+
   return {
     schemaVersion: 1,
     tool: {
       name: TOOL_NAME,
       version: VERSION
+    },
+    source: source ?? {
+      kind: "local-directory",
+      input: config.rootPath,
+      resolved: config.rootPath,
+      temporary: false
     },
     scannedAt: new Date().toISOString(),
     rootPath: config.rootPath,
@@ -44,8 +54,11 @@ export async function scanWorkspace(config: ResolvedConfig): Promise<ScanResult>
       bySeverity,
       filesScanned: artifactResult.artifacts.length,
       filesMatched: discovery.files.length,
-      parseErrors: diagnostics.filter((diagnostic) => diagnostic.kind === "parse_error").length
+      parseErrors,
+      readErrors,
+      incomplete: parseErrors > 0 || readErrors > 0
     },
+    risk: buildRiskSummary(evaluation.findings, parseErrors > 0 || readErrors > 0),
     findings: evaluation.findings,
     diagnostics,
     stats: {
@@ -56,3 +69,43 @@ export async function scanWorkspace(config: ResolvedConfig): Promise<ScanResult>
   };
 }
 
+function buildRiskSummary(findings: ScanResult["findings"], incomplete: boolean): ScanResult["risk"] {
+  const categories: ScanResult["risk"]["categories"] = {};
+  for (const finding of findings) {
+    categories[finding.category] = (categories[finding.category] ?? 0) + 1;
+  }
+
+  if (incomplete) {
+    return {
+      verdict: "incomplete",
+      reasons: ["One or more high-signal files could not be parsed or read."],
+      categories
+    };
+  }
+
+  const critical = findings.filter((finding) => finding.severity === "critical").length;
+  const high = findings.filter((finding) => finding.severity === "high").length;
+  const medium = findings.filter((finding) => finding.severity === "medium").length;
+
+  if (critical > 0 || high > 0) {
+    return {
+      verdict: "block",
+      reasons: [`${critical} critical and ${high} high findings require review before execution.`],
+      categories
+    };
+  }
+
+  if (medium > 0) {
+    return {
+      verdict: "review",
+      reasons: [`${medium} medium findings should be reviewed before trusting this artifact.`],
+      categories
+    };
+  }
+
+  return {
+    verdict: "pass",
+    reasons: ["No findings at the current rule settings."],
+    categories
+  };
+}

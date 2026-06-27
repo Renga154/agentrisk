@@ -39,11 +39,11 @@ export async function buildArtifacts(files: DiscoveredFile[], config: ResolvedCo
     if (kind === "mcpConfig" || kind === "packageJson" || kind === "unknownJson") {
       const parsed = parseJson(raw);
       if (!parsed.ok) {
-        diagnostics.push({
-          kind: "parse_error",
-          path: file.path,
-          message: parsed.message
-        });
+      diagnostics.push({
+        kind: "parse_error",
+        path: file.path,
+        message: parsed.message
+      });
         if (config.strictParse) {
           continue;
         }
@@ -108,6 +108,9 @@ function inferKind(filePath: string): Artifact["kind"] {
     basename === "AGENTS.md" ||
     basename === "CLAUDE.md" ||
     basename === "GEMINI.md" ||
+    basename === "SKILL.md" ||
+    normalized.startsWith(".github/agents/") ||
+    normalized.includes("/.github/agents/") ||
     normalized === ".github/copilot-instructions.md" ||
     normalized.endsWith("/.github/copilot-instructions.md")
   ) {

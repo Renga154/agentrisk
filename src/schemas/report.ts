@@ -7,6 +7,13 @@ export const reportSchema = z.object({
     name: z.string(),
     version: z.string()
   }),
+  source: z.object({
+    kind: z.enum(["local-directory", "local-archive", "github", "npm", "remote-archive"]),
+    input: z.string(),
+    resolved: z.string(),
+    temporary: z.boolean(),
+    note: z.string().optional()
+  }),
   scannedAt: z.string(),
   rootPath: z.string(),
   profile: z.enum(["recommended", "strict"]),
@@ -15,7 +22,14 @@ export const reportSchema = z.object({
     bySeverity: z.record(severitySchema, z.number()),
     filesScanned: z.number(),
     filesMatched: z.number(),
-    parseErrors: z.number()
+    parseErrors: z.number(),
+    readErrors: z.number(),
+    incomplete: z.boolean()
+  }),
+  risk: z.object({
+    verdict: z.enum(["pass", "review", "block", "incomplete"]),
+    reasons: z.array(z.string()),
+    categories: z.record(z.string(), z.number())
   }),
   findings: z.array(
     z.object({
@@ -61,4 +75,3 @@ export const reportSchema = z.object({
     rulesEvaluated: z.number()
   })
 });
-

@@ -11,7 +11,7 @@ export function renderSarif(result: ScanResult): string {
           driver: {
             name: result.tool.name,
             version: result.tool.version,
-            informationUri: "https://github.com/satourenware/agentrisk",
+            informationUri: "https://github.com/Renga154/agentrisk",
             rules: builtinRules.map((rule) => ({
               id: rule.id,
               name: rule.title,
@@ -28,6 +28,34 @@ export function renderSarif(result: ScanResult): string {
             }))
           }
         },
+        properties: {
+          source: result.source,
+          risk: result.risk
+        },
+        invocations: [
+          {
+            executionSuccessful: !result.summary.incomplete,
+            toolExecutionNotifications: result.diagnostics
+              .filter((diagnostic) => diagnostic.kind === "parse_error" || diagnostic.kind === "read_error")
+              .map((diagnostic) => ({
+                level: "error",
+                message: {
+                  text: `${diagnostic.kind}${diagnostic.path ? ` in ${diagnostic.path}` : ""}: ${diagnostic.message}`
+                },
+                locations: diagnostic.path
+                  ? [
+                      {
+                        physicalLocation: {
+                          artifactLocation: {
+                            uri: diagnostic.path
+                          }
+                        }
+                      }
+                    ]
+                  : []
+              }))
+          }
+        ],
         results: result.findings.map(findingToSarif)
       }
     ]

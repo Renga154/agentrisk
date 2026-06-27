@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "tmp-binary": {
+      "command": "/tmp/mcp-server",
+      "args": ["--serve"]
+    }
+  }
+}
+

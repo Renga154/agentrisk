@@ -6,6 +6,7 @@ import { type ResolvedConfig, type UserConfig, userConfigSchema } from "./schema
 export interface LoadConfigInput {
   rootPath: string;
   configPath?: string;
+  ignoreLocalConfig?: boolean;
   profile?: string;
   include?: string[];
   exclude?: string[];
@@ -16,13 +17,14 @@ export interface LoadConfigInput {
   maxFileSize?: string;
   followSymlinks?: boolean;
   noGitignore?: boolean;
+  respectGitignore?: boolean;
   strictParse?: boolean;
   color?: string;
 }
 
 export async function loadConfig(input: LoadConfigInput): Promise<ResolvedConfig> {
   const rootPath = path.resolve(input.rootPath);
-  const fileConfig = await readConfigFile(rootPath, input.configPath);
+  const fileConfig = await readConfigFile(rootPath, input.configPath, input.ignoreLocalConfig);
 
   const envConfig: Partial<UserConfig> = {
     profile: parseStringEnv("AGENTRISK_PROFILE") as UserConfig["profile"],
@@ -47,7 +49,7 @@ export async function loadConfig(input: LoadConfigInput): Promise<ResolvedConfig
       minSeverity: input.minSeverity,
       maxFileSize: input.maxFileSize ? Number(input.maxFileSize) : undefined,
       followSymlinks: input.followSymlinks,
-      respectGitignore: input.noGitignore === true ? false : undefined,
+      respectGitignore: input.respectGitignore ?? (input.noGitignore === true ? false : undefined),
       strictParse: input.strictParse
     }),
     rules: {
@@ -90,7 +92,10 @@ export async function loadConfig(input: LoadConfigInput): Promise<ResolvedConfig
   };
 }
 
-async function readConfigFile(rootPath: string, explicitPath?: string): Promise<UserConfig> {
+async function readConfigFile(rootPath: string, explicitPath?: string, ignoreLocalConfig = false): Promise<UserConfig> {
+  if (ignoreLocalConfig && !explicitPath) {
+    return { version: 1 };
+  }
   const candidates = explicitPath
     ? [path.resolve(rootPath, explicitPath)]
     : [path.join(rootPath, "agentrisk.config.json"), path.join(rootPath, ".agentrisk.json")];

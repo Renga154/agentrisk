@@ -22,6 +22,7 @@ AgentRisk is designed as a zero-execution scanner. A vulnerability report is esp
 - executes target workspace code
 - invokes package scripts from the target
 - connects to target MCP servers
+- trusts target-provided config for remote, npm, or archive scans without an explicit `--config`
+- hides parse or read failures while returning a clean scan
 - leaks scanned file contents unexpectedly
 - produces unsafe remediation advice
-

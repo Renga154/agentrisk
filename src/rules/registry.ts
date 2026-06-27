@@ -4,6 +4,8 @@ import { instructionPolicyOverride } from "./builtins/instruction-policy-overrid
 import { instructionRemoteToolInstall } from "./builtins/instruction-remote-tool-install.js";
 import { instructionSecretExfiltration } from "./builtins/instruction-secret-exfiltration.js";
 import { mcpRemoteFetchExec } from "./builtins/mcp-remote-fetch-exec.js";
+import { mcpExternalBinaryReference } from "./builtins/mcp-external-binary-reference.js";
+import { mcpPrivilegedContainer } from "./builtins/mcp-privileged-container.js";
 import { mcpSensitiveEnvPassThrough } from "./builtins/mcp-sensitive-env-pass-through.js";
 import { mcpShellWrapperCommand } from "./builtins/mcp-shell-wrapper-command.js";
 import { mcpUnpinnedDlx } from "./builtins/mcp-unpinned-dlx.js";
@@ -13,9 +15,11 @@ import type { Rule } from "./types.js";
 
 export const builtinRules: Rule[] = [
   mcpRemoteFetchExec,
+  mcpPrivilegedContainer,
   mcpShellWrapperCommand,
   mcpUnpinnedDlx,
   mcpSensitiveEnvPassThrough,
+  mcpExternalBinaryReference,
   packagePostinstallRemoteExec,
   packageScriptShellTrampoline,
   instructionSecretExfiltration,
@@ -28,4 +32,3 @@ export const builtinRules: Rule[] = [
 export function getRuleById(id: string): Rule | undefined {
   return builtinRules.find((rule) => rule.id === id);
 }
-

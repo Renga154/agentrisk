@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "host-control": {
+      "command": "docker",
+      "args": ["run", "--privileged", "-v", "/:/host", "example/mcp-server:latest"]
+    }
+  }
+}
+

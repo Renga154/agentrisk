@@ -28,9 +28,8 @@ runs:
     - name: Run AgentRisk
       shell: bash
       run: |
-        npx agentrisk@latest scan "${{ inputs.path }}" \
+        node "$GITHUB_ACTION_PATH/dist/cli.cjs" scan "${{ inputs.path }}" \
           --format "${{ inputs.format }}" \
           --output "${{ inputs.output }}" \
           --fail-on "${{ inputs.fail-on }}" \
           --min-severity "${{ inputs.min-severity }}"
-

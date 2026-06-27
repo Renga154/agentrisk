@@ -5,13 +5,17 @@ export function renderTerminal(result: ScanResult, color: "auto" | "always" | "n
   const c = color === "never" ? pc.createColors(false) : pc.createColors(color === "always" || process.stdout.isTTY);
   const lines = [
     c.bold("AgentRisk scan"),
+    `Source: ${formatSource(result)}`,
     `Root: ${result.rootPath}`,
     `Files: ${result.summary.filesScanned} scanned, ${result.summary.filesMatched} matched`,
+    `Verdict: ${formatVerdict(result, c)}`,
     `Findings: ${formatSummary(result, c)}`,
     ""
   ];
 
-  if (result.findings.length === 0) {
+  if (result.summary.incomplete && result.findings.length === 0) {
+    lines.push(c.red("Scan incomplete; review diagnostics before trusting this artifact."), "");
+  } else if (result.findings.length === 0) {
     lines.push(c.green("No findings at the current rule settings."), "");
   } else {
     const grouped = groupFindings(result.findings);
@@ -43,7 +47,7 @@ export function renderTerminal(result: ScanResult, color: "auto" | "always" | "n
 
   const visibleDiagnostics = result.diagnostics.filter((diagnostic) => diagnostic.kind !== "skipped_file");
   if (visibleDiagnostics.length > 0) {
-    lines.push(c.bold("Diagnostics"));
+    lines.push(c.bold(result.summary.incomplete ? "Diagnostics (scan incomplete)" : "Diagnostics"));
     for (const diagnostic of visibleDiagnostics) {
       lines.push(`  ${diagnostic.kind}${diagnostic.path ? ` ${diagnostic.path}` : ""}: ${diagnostic.message}`);
     }
@@ -51,6 +55,21 @@ export function renderTerminal(result: ScanResult, color: "auto" | "always" | "n
   }
 
   return lines.join("\n");
+}
+
+function formatVerdict(result: ScanResult, c: ReturnType<typeof pc.createColors>): string {
+  if (result.risk.verdict === "block" || result.risk.verdict === "incomplete") {
+    return c.red(result.risk.verdict.toUpperCase());
+  }
+  if (result.risk.verdict === "review") {
+    return c.yellow("REVIEW");
+  }
+  return c.green("PASS");
+}
+
+function formatSource(result: ScanResult): string {
+  const suffix = result.source.note ? ` (${result.source.note})` : "";
+  return `${result.source.kind} ${result.source.input}${suffix}`;
 }
 
 function groupFindings(findings: Finding[]): Record<Finding["severity"], Finding[]> {

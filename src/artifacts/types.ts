@@ -1,4 +1,5 @@
 import type { Severity } from "../shared/severity.js";
+import type { TargetSource } from "../targets/types.js";
 
 export type ArtifactKind =
   | "mcpConfig"
@@ -95,6 +96,8 @@ export interface ScanSummary {
   filesScanned: number;
   filesMatched: number;
   parseErrors: number;
+  readErrors: number;
+  incomplete: boolean;
 }
 
 export interface ScanStats {
@@ -103,18 +106,25 @@ export interface ScanStats {
   rulesEvaluated: number;
 }
 
+export interface RiskSummary {
+  verdict: "pass" | "review" | "block" | "incomplete";
+  reasons: string[];
+  categories: Partial<Record<FindingCategory, number>>;
+}
+
 export interface ScanResult {
   schemaVersion: 1;
   tool: {
     name: string;
     version: string;
   };
+  source: TargetSource;
   scannedAt: string;
   rootPath: string;
   profile: "recommended" | "strict";
   summary: ScanSummary;
+  risk: RiskSummary;
   findings: Finding[];
   diagnostics: ScanDiagnostic[];
   stats: ScanStats;
 }
-

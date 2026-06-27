@@ -7,6 +7,7 @@ import { renderMarkdown } from "../renderers/markdown.js";
 import { renderSarif } from "../renderers/sarif.js";
 import { renderTerminal } from "../renderers/terminal.js";
 import { isAtLeastSeverity } from "../shared/severity.js";
+import { resolveTarget } from "../targets/resolve-target.js";
 
 export type OutputFormat = "terminal" | "json" | "sarif" | "markdown" | "auto";
 
@@ -26,15 +27,25 @@ export function registerScanCommand(program: Command): void {
     .option("--fail-on <severity>", "exit 1 when findings are at least this severity", "high")
     .option("--min-severity <severity>", "only render findings at least this severity", "low")
     .option("--max-file-size <bytes>", "skip files larger than this size in bytes")
-    .option("--no-gitignore", "do not apply .gitignore")
+    .option("--max-download-size <bytes>", "maximum bytes to download for remote, GitHub, npm, or archive targets", "50000000")
+    .option("--github-ref <ref>", "Git ref to use for GitHub targets")
+    .option("--keep-temp", "keep extracted temporary target directories for debugging")
+    .option("--gitignore", "apply target .gitignore during discovery (off by default)")
     .option("--follow-symlinks", "follow symlinks during discovery")
     .option("--strict-parse", "drop malformed JSON artifacts from rule evaluation")
     .option("--color <mode>", "auto, always, or never", "auto")
     .action(async (targetPath: string, options) => {
+      let resolvedTarget: Awaited<ReturnType<typeof resolveTarget>> | undefined;
       try {
+        resolvedTarget = await resolveTarget(targetPath, {
+          maxDownloadSize: Number(options.maxDownloadSize),
+          keepTemp: Boolean(options.keepTemp),
+          githubRef: options.githubRef
+        });
         const config = await loadConfig({
-          rootPath: targetPath,
+          rootPath: resolvedTarget.rootPath,
           configPath: options.config,
+          ignoreLocalConfig: resolvedTarget.source.kind !== "local-directory",
           profile: options.profile,
           include: options.include,
           exclude: options.exclude,
@@ -44,12 +55,12 @@ export function registerScanCommand(program: Command): void {
           minSeverity: options.minSeverity,
           maxFileSize: options.maxFileSize,
           followSymlinks: options.followSymlinks,
-          noGitignore: options.gitignore === false,
+          respectGitignore: options.gitignore === true,
           strictParse: options.strictParse,
           color: options.color
         });
 
-        const result = await scanWorkspace(config);
+        const result = await scanWorkspace(config, resolvedTarget.source);
         const filteredResult = filterResultBySeverity(result, config.minSeverity);
         const format = resolveFormat(options.format, Boolean(options.output));
         const rendered = render(format, filteredResult, config.color);
@@ -61,11 +72,13 @@ export function registerScanCommand(program: Command): void {
           process.stdout.write(rendered);
         }
 
-        const shouldFail = result.findings.some((finding) => isAtLeastSeverity(finding.severity, config.failOn));
+        const shouldFail = result.summary.incomplete || result.findings.some((finding) => isAtLeastSeverity(finding.severity, config.failOn));
         process.exitCode = shouldFail ? 1 : 0;
       } catch (error) {
         process.stderr.write(`agentrisk scan failed: ${(error as Error).message}\n`);
         process.exitCode = isUsageOrConfigError(error) ? 2 : 3;
+      } finally {
+        await resolvedTarget?.cleanup();
       }
     });
 }
@@ -114,11 +127,48 @@ function filterResultBySeverity(result: Parameters<typeof renderJson>[0], minSev
   return {
     ...result,
     findings,
+    risk: buildRiskForFindings(findings, result.summary.incomplete),
     summary: {
       ...result.summary,
       totalFindings: findings.length,
       bySeverity
     }
+  };
+}
+
+function buildRiskForFindings(findings: Parameters<typeof renderJson>[0]["findings"], incomplete: boolean): Parameters<typeof renderJson>[0]["risk"] {
+  const categories: Parameters<typeof renderJson>[0]["risk"]["categories"] = {};
+  for (const finding of findings) {
+    categories[finding.category] = (categories[finding.category] ?? 0) + 1;
+  }
+  if (incomplete) {
+    return {
+      verdict: "incomplete",
+      reasons: ["One or more high-signal files could not be parsed or read."],
+      categories
+    };
+  }
+  const critical = findings.filter((finding) => finding.severity === "critical").length;
+  const high = findings.filter((finding) => finding.severity === "high").length;
+  const medium = findings.filter((finding) => finding.severity === "medium").length;
+  if (critical > 0 || high > 0) {
+    return {
+      verdict: "block",
+      reasons: [`${critical} critical and ${high} high findings require review before execution.`],
+      categories
+    };
+  }
+  if (medium > 0) {
+    return {
+      verdict: "review",
+      reasons: [`${medium} medium findings should be reviewed before trusting this artifact.`],
+      categories
+    };
+  }
+  return {
+    verdict: "pass",
+    reasons: ["No findings at the current rule settings."],
+    categories
   };
 }
 

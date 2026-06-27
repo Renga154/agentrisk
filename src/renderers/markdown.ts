@@ -4,16 +4,19 @@ export function renderMarkdown(result: ScanResult): string {
   const lines = [
     "# AgentRisk Scan Report",
     "",
+    `- Source: \`${result.source.kind} ${result.source.input}\`${result.source.note ? ` (${result.source.note})` : ""}`,
     `- Root: \`${result.rootPath}\``,
     `- Scanned at: \`${result.scannedAt}\``,
     `- Files scanned: ${result.summary.filesScanned}`,
+    `- Verdict: ${result.risk.verdict}`,
     `- Findings: ${result.summary.totalFindings}`,
     `- Severity: critical ${result.summary.bySeverity.critical}, high ${result.summary.bySeverity.high}, medium ${result.summary.bySeverity.medium}, low ${result.summary.bySeverity.low}`,
+    `- Incomplete: ${result.summary.incomplete ? "yes" : "no"}`,
     ""
   ];
 
   if (result.findings.length === 0) {
-    lines.push("No findings.");
+    lines.push(result.summary.incomplete ? "Scan incomplete; review diagnostics before trusting this artifact." : "No findings.");
   } else {
     lines.push("## Findings", "");
     for (const finding of result.findings) {

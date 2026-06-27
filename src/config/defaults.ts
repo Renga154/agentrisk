@@ -9,6 +9,10 @@ export const defaultInclude = [
   "**/claude_desktop_config.json",
   ".cursor/rules/**/*",
   "**/.cursor/rules/**/*",
+  ".github/agents/**/*",
+  "**/.github/agents/**/*",
+  "SKILL.md",
+  "**/SKILL.md",
   "AGENTS.md",
   "**/AGENTS.md",
   "CLAUDE.md",
@@ -43,6 +47,6 @@ export const defaultConfig: Omit<ResolvedConfig, "rootPath" | "color"> = {
   minSeverity: "low",
   maxFileSize: 1_000_000,
   followSymlinks: false,
-  respectGitignore: true,
-  strictParse: false
+  respectGitignore: false,
+  strictParse: true
 };

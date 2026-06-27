@@ -1,18 +1,18 @@
 {
   "name": "agentrisk",
   "version": "0.1.0",
-  "description": "Static risk scanner for AI-agent and MCP workspace configuration.",
+  "description": "Zero-execution preflight scanner for untrusted AI-agent and MCP artifacts.",
   "type": "module",
-  "homepage": "https://github.com/satourenware/agentrisk#readme",
+  "homepage": "https://github.com/Renga154/agentrisk#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/satourenware/agentrisk.git"
+    "url": "git+https://github.com/Renga154/agentrisk.git"
   },
   "bugs": {
-    "url": "https://github.com/satourenware/agentrisk/issues"
+    "url": "https://github.com/Renga154/agentrisk/issues"
   },
   "bin": {
-    "agentrisk": "./dist/cli.js"
+    "agentrisk": "./dist/cli.cjs"
   },
   "files": [
     "dist",
@@ -20,12 +20,13 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/cli.ts --format esm --target node20 --dts --clean --sourcemap",
+    "build": "tsup",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "corpus:evaluate": "npm run build && node scripts/evaluate-corpus.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
     "prepublishOnly": "npm run check && npm audit --audit-level=moderate"
   },
@@ -53,6 +54,7 @@
     "fast-glob": "^3.3.2",
     "ignore": "^5.3.2",
     "picocolors": "^1.1.1",
+    "tar": "^7.5.2",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.23.5"
   },
