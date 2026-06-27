@@ -6,9 +6,11 @@
 
 [English](README.md) | [日本語](README.ja.md)
 
-信頼していない AI エージェント / MCP 関連アーティファクトを、実行前に静的スキャンするためのゼロ実行プリフライトスキャナーです。
+AgentRisk は、AI に作業を任せる前に未知のリポジトリやパッケージを確認する **「開く前スキャン」CLI** です。AI コーディングエージェントが指示ファイルを読んだり、MCP サーバーやインストールスクリプトを動かしたりする前に、危険な設定や怪しい命令をゼロ実行で検出します。
 
-AgentRisk は、AI コーディングエージェント、MCP サーバー、インストールスクリプトが動く前に、リポジトリ、GitHub URL、npm パッケージ、tarball をスキャンします。高シグナルな設定ファイルと指示ファイルを読み取り、型付きアーティファクトへ正規化し、決定的なルールで評価して、Terminal / JSON / Markdown / SARIF レポートを出力します。
+`.mcp.json`、`AGENTS.md`、`SKILL.md`、Cursor rules、Copilot instructions、`package.json` のための安全確認ゲートとして使えます。「外部スクリプトをダウンロードして実行する」「secret を渡す」「承認を無視する」といった危険パターンを、AI が従ってしまう前に見つけます。
+
+![AgentRisk demo](https://raw.githubusercontent.com/Renga154/agentrisk/main/assets/agentrisk-demo.gif)
 
 MCP サーバーには接続しません。package script は実行しません。対象の依存関係はインストールしません。ワークスペースが安全かどうかを LLM に判定させることもありません。
 

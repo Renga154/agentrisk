@@ -6,9 +6,11 @@
 
 [English](README.md) | [日本語](README.ja.md)
 
-Zero-execution preflight scanning for untrusted AI-agent and MCP artifacts.
+AgentRisk is a **scan-before-trust CLI** for AI-agent workspaces. Point it at an unknown repository, GitHub URL, npm package, or tarball before your AI coding agent opens it, and AgentRisk flags risky MCP launchers, install scripts, and repo instructions without executing the target.
 
-AgentRisk scans a repository, GitHub URL, npm package, or tarball before an AI coding agent, MCP server, or install script gets a chance to run. It reads high-signal configuration and instruction files, normalizes them into typed artifacts, evaluates deterministic rules, and emits Terminal, JSON, Markdown, or SARIF reports.
+Think of it as a security gate for `.mcp.json`, `AGENTS.md`, `SKILL.md`, Cursor rules, Copilot instructions, and `package.json`: it helps catch "download and run this script", "forward this secret", and "ignore approval" patterns before an agent gets the chance to follow them.
+
+![AgentRisk demo](https://raw.githubusercontent.com/Renga154/agentrisk/main/assets/agentrisk-demo.gif)
 
 It never connects to MCP servers. It never runs package scripts. It never installs target dependencies. It never asks an LLM to decide whether your workspace is safe.
 
