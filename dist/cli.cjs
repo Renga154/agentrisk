@@ -14710,7 +14710,7 @@ function renderSarif(result) {
           driver: {
             name: result.tool.name,
             version: result.tool.version,
-            informationUri: "https://github.com/satourenware/agentrisk",
+            informationUri: "https://github.com/Renga154/agentrisk",
             rules: builtinRules.map((rule) => ({
               id: rule.id,
               name: rule.title,
@@ -17827,7 +17827,7 @@ var Ro = (s3) => {
 };
 
 // src/targets/resolve-target.ts
-var userAgent = "AgentRisk/0.1.0 (+https://github.com/satourenware/agentrisk)";
+var userAgent = "AgentRisk/0.1.0 (+https://github.com/Renga154/agentrisk)";
 async function resolveTarget(input, options) {
   const github = parseGitHubTarget(input, options.githubRef);
   if (github) {

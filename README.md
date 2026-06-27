@@ -212,7 +212,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: Renga154/agentrisk@v0.1.0
         with:
           format: sarif
@@ -240,10 +240,10 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
       - run: npx agentrisk@0.1.0 scan . --format sarif --output agentrisk.sarif
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
