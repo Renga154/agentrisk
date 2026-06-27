@@ -1,7 +1,7 @@
 # AgentRisk
 
 [![CI](https://github.com/Renga154/agentrisk/actions/workflows/ci.yml/badge.svg)](https://github.com/Renga154/agentrisk/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/github/package-json/v/Renga154/agentrisk?label=version)](package.json)
+[![npm](https://img.shields.io/npm/v/agentrisk.svg)](https://www.npmjs.com/package/agentrisk)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 [English](README.md) | [日本語](README.ja.md)
@@ -15,9 +15,9 @@ Think of it as a security gate for `.mcp.json`, `AGENTS.md`, `SKILL.md`, Cursor 
 It never connects to MCP servers. It never runs package scripts. It never installs target dependencies. It never asks an LLM to decide whether your workspace is safe.
 
 ```bash
-npm exec --yes github:Renga154/agentrisk -- scan https://github.com/owner/suspicious-agent-repo
-npm exec --yes github:Renga154/agentrisk -- scan npm:some-mcp-server@1.2.3
-npm exec --yes github:Renga154/agentrisk -- scan ./downloaded-agent.tgz
+npx agentrisk scan https://github.com/owner/suspicious-agent-repo
+npx agentrisk scan npm:some-mcp-server@1.2.3
+npx agentrisk scan ./downloaded-agent.tgz
 ```
 
 ```text
@@ -85,8 +85,8 @@ AgentRisk currently discovers:
 Inspect the rule pack:
 
 ```bash
-npm exec --yes github:Renga154/agentrisk -- rules list
-npm exec --yes github:Renga154/agentrisk -- rules show mcp-remote-fetch-exec
+npx agentrisk rules list
+npx agentrisk rules show mcp-remote-fetch-exec
 ```
 
 The checked-in corpus currently reports **3/3 benign cases clean** and **5/5 malicious cases detected**. See [docs/corpus-report.md](docs/corpus-report.md), generated with `npm run corpus:evaluate`.
@@ -96,37 +96,29 @@ The checked-in corpus currently reports **3/3 benign cases clean** and **5/5 mal
 Use without installing:
 
 ```bash
-npm exec --yes github:Renga154/agentrisk -- scan .
+npx agentrisk scan .
 ```
-
-After the npm package is published, the same commands can be shortened to `npx agentrisk scan ...`.
 
 Preflight remote artifacts:
 
 ```bash
 # GitHub repo default branch
-npm exec --yes github:Renga154/agentrisk -- scan https://github.com/modelcontextprotocol/servers
+npx agentrisk scan https://github.com/modelcontextprotocol/servers
 
 # GitHub shorthand with a ref
-npm exec --yes github:Renga154/agentrisk -- scan github:owner/repo#v1.2.3
+npx agentrisk scan github:owner/repo#v1.2.3
 
 # npm package tarball, downloaded and extracted without running scripts
-npm exec --yes github:Renga154/agentrisk -- scan npm:some-mcp-server@1.2.3
+npx agentrisk scan npm:some-mcp-server@1.2.3
 
 # Local or remote tarballs
-npm exec --yes github:Renga154/agentrisk -- scan ./agent-server.tgz
-npm exec --yes github:Renga154/agentrisk -- scan https://example.com/agent-server.tar.gz
+npx agentrisk scan ./agent-server.tgz
+npx agentrisk scan https://example.com/agent-server.tar.gz
 ```
 
 For remote, npm, and archive targets, AgentRisk ignores any target-provided `agentrisk.config.json` unless you pass `--config` explicitly. An untrusted artifact should not get to configure away its own scan.
 
 ## Install
-
-Use directly from GitHub before the npm package is published:
-
-```bash
-npm exec --yes github:Renga154/agentrisk -- scan .
-```
 
 Install globally:
 
@@ -235,7 +227,7 @@ jobs:
           sarif_file: agentrisk.sarif
 ```
 
-Or run the npm package directly after it is published:
+Or run the npm package directly:
 
 ```yaml
 name: AgentRisk
