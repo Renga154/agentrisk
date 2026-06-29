@@ -6,7 +6,7 @@
 
 [English](README.md) | [日本語](README.ja.md)
 
-AgentRisk is a **scan-before-trust CLI** for AI-agent workspaces. Point it at an unknown repository, GitHub URL, npm package, or tarball before your AI coding agent opens it, and AgentRisk flags risky MCP launchers, install scripts, and repo instructions without executing the target.
+AgentRisk is a **scan-before-trust CLI and MCP server** for AI-agent workspaces. Point it at an unknown repository, GitHub URL, npm package, or tarball before your AI coding agent opens it, and AgentRisk flags risky MCP launchers, install scripts, and repo instructions without executing the target.
 
 Think of it as a security gate for `.mcp.json`, `AGENTS.md`, `SKILL.md`, Cursor rules, Copilot instructions, and `package.json`: it helps catch "download and run this script", "forward this secret", and "ignore approval" patterns before an agent gets the chance to follow them.
 
@@ -18,6 +18,7 @@ It never connects to MCP servers. It never runs package scripts. It never instal
 npx agentrisk scan https://github.com/owner/suspicious-agent-repo
 npx agentrisk scan npm:some-mcp-server@1.2.3
 npx agentrisk scan ./downloaded-agent.tgz
+npx agentrisk mcp
 ```
 
 ```text
@@ -133,6 +134,7 @@ Use from a checked-out repository:
 npm install
 npm run build
 node dist/cli.cjs scan .
+node dist/mcp-cli.cjs
 ```
 
 ## CLI
@@ -144,6 +146,7 @@ agentrisk rules show <ruleId>
 agentrisk config print [path]
 agentrisk schema config
 agentrisk schema report
+agentrisk mcp
 ```
 
 Useful scan flags:
@@ -158,6 +161,47 @@ agentrisk scan . --fail-on medium
 agentrisk scan . --exclude-rule mcp-unpinned-dlx
 agentrisk scan . --gitignore
 ```
+
+## MCP Server
+
+AgentRisk can run as a local stdio MCP server so LLM clients can ask it to scan an artifact before trusting it.
+
+The server exposes one tool:
+
+- `agentrisk_scan`: statically scans a local path, GitHub target, npm package, or archive and returns a text summary plus a structured AgentRisk report
+
+Run it directly:
+
+```bash
+npx agentrisk@latest mcp
+```
+
+Example MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "agentrisk": {
+      "command": "npx",
+      "args": ["-y", "agentrisk@latest", "mcp"]
+    }
+  }
+}
+```
+
+Example tool input:
+
+```json
+{
+  "target": "github:owner/repo#main",
+  "profile": "strict",
+  "minSeverity": "medium",
+  "failOn": "high",
+  "maxFindings": 25
+}
+```
+
+MCP mode keeps the same safety model as the CLI: it may read local files and download explicitly requested GitHub/npm/archive targets, but it does not execute target code, run package scripts, install dependencies, or connect to target MCP servers.
 
 Exit codes:
 
@@ -217,7 +261,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v5
-      - uses: Renga154/agentrisk@v0.1.0
+      - uses: Renga154/agentrisk@v0.2.0
         with:
           format: sarif
           output: agentrisk.sarif
@@ -248,7 +292,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - run: npx agentrisk@0.1.0 scan . --format sarif --output agentrisk.sarif
+      - run: npx agentrisk@0.2.0 scan . --format sarif --output agentrisk.sarif
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
@@ -275,6 +319,7 @@ AgentRisk does not:
 - honor target `.gitignore` by default
 - trust target-provided AgentRisk config for remote/npm/archive targets
 - connect to model providers
+- send content to LLMs by itself; MCP clients decide what to show the model
 - send workspace contents to remote services
 - guarantee zero false positives or complete coverage
 

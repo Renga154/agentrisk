@@ -1,6 +1,6 @@
 {
   "name": "agentrisk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Zero-execution preflight scanner for untrusted AI-agent and MCP artifacts.",
   "type": "module",
   "homepage": "https://github.com/Renga154/agentrisk#readme",
@@ -12,7 +12,8 @@
     "url": "https://github.com/Renga154/agentrisk/issues"
   },
   "bin": {
-    "agentrisk": "dist/cli.cjs"
+    "agentrisk": "dist/cli.cjs",
+    "agentrisk-mcp": "dist/mcp-cli.cjs"
   },
   "files": [
     "dist",
@@ -51,13 +52,14 @@
     "esbuild": "^0.28.1"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "commander": "^12.1.0",
     "fast-glob": "^3.3.2",
     "ignore": "^5.3.2",
     "picocolors": "^1.1.1",
     "tar": "^7.5.2",
-    "zod": "^3.23.8",
-    "zod-to-json-schema": "^3.23.5"
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@types/node": "^20.14.15",

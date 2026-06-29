@@ -1,15 +1,6 @@
 import fs from "node:fs/promises";
 import type { Command } from "commander";
-import { loadConfig } from "../config/load-config.js";
-import { scanWorkspace } from "../engine/scan-workspace.js";
-import { renderJson } from "../renderers/json.js";
-import { renderMarkdown } from "../renderers/markdown.js";
-import { renderSarif } from "../renderers/sarif.js";
-import { renderTerminal } from "../renderers/terminal.js";
-import { isAtLeastSeverity } from "../shared/severity.js";
-import { resolveTarget } from "../targets/resolve-target.js";
-
-export type OutputFormat = "terminal" | "json" | "sarif" | "markdown" | "auto";
+import { isUsageOrConfigError, runScan } from "../engine/run-scan.js";
 
 export function registerScanCommand(program: Command): void {
   program
@@ -35,50 +26,40 @@ export function registerScanCommand(program: Command): void {
     .option("--strict-parse", "drop malformed JSON artifacts from rule evaluation")
     .option("--color <mode>", "auto, always, or never", "auto")
     .action(async (targetPath: string, options) => {
-      let resolvedTarget: Awaited<ReturnType<typeof resolveTarget>> | undefined;
       try {
-        resolvedTarget = await resolveTarget(targetPath, {
-          maxDownloadSize: Number(options.maxDownloadSize),
-          keepTemp: Boolean(options.keepTemp),
-          githubRef: options.githubRef
-        });
-        const config = await loadConfig({
-          rootPath: resolvedTarget.rootPath,
+        const scan = await runScan({
+          target: targetPath,
           configPath: options.config,
-          ignoreLocalConfig: resolvedTarget.source.kind !== "local-directory",
           profile: options.profile,
           include: options.include,
           exclude: options.exclude,
           rules: options.rule,
           excludeRules: options.excludeRule,
+          format: options.format,
+          output: options.output,
           failOn: options.failOn,
           minSeverity: options.minSeverity,
           maxFileSize: options.maxFileSize,
-          followSymlinks: options.followSymlinks,
+          maxDownloadSize: options.maxDownloadSize,
+          githubRef: options.githubRef,
+          keepTemp: options.keepTemp,
           respectGitignore: options.gitignore === true,
+          followSymlinks: options.followSymlinks,
           strictParse: options.strictParse,
           color: options.color
         });
 
-        const result = await scanWorkspace(config, resolvedTarget.source);
-        const filteredResult = filterResultBySeverity(result, config.minSeverity);
-        const format = resolveFormat(options.format, Boolean(options.output));
-        const rendered = render(format, filteredResult, config.color);
-
         if (options.output) {
-          await fs.writeFile(options.output, rendered, "utf8");
-          process.stderr.write(`AgentRisk wrote ${format} report to ${options.output}\n`);
+          await fs.writeFile(options.output, scan.rendered, "utf8");
+          process.stderr.write(`AgentRisk wrote ${scan.format} report to ${options.output}\n`);
         } else {
-          process.stdout.write(rendered);
+          process.stdout.write(scan.rendered);
         }
 
-        const shouldFail = result.summary.incomplete || result.findings.some((finding) => isAtLeastSeverity(finding.severity, config.failOn));
-        process.exitCode = shouldFail ? 1 : 0;
+        process.exitCode = scan.exitCode;
       } catch (error) {
         process.stderr.write(`agentrisk scan failed: ${(error as Error).message}\n`);
         process.exitCode = isUsageOrConfigError(error) ? 2 : 3;
-      } finally {
-        await resolvedTarget?.cleanup();
       }
     });
 }
@@ -86,99 +67,4 @@ export function registerScanCommand(program: Command): void {
 function collect(value: string, previous: string[]): string[] {
   previous.push(value);
   return previous;
-}
-
-function resolveFormat(value: string, hasOutput: boolean): Exclude<OutputFormat, "auto"> {
-  if (value === "auto") {
-    return hasOutput || !process.stdout.isTTY ? "json" : "terminal";
-  }
-  if (value === "terminal" || value === "json" || value === "sarif" || value === "markdown") {
-    return value;
-  }
-  throw new Error(`Unsupported format "${value}"`);
-}
-
-function render(format: Exclude<OutputFormat, "auto">, result: Parameters<typeof renderJson>[0], color: "auto" | "always" | "never"): string {
-  if (format === "json") {
-    return renderJson(result);
-  }
-  if (format === "sarif") {
-    return renderSarif(result);
-  }
-  if (format === "markdown") {
-    return renderMarkdown(result);
-  }
-  return renderTerminal(result, color);
-}
-
-function filterResultBySeverity(result: Parameters<typeof renderJson>[0], minSeverity: "low" | "medium" | "high" | "critical") {
-  const findings = result.findings.filter((finding) => isAtLeastSeverity(finding.severity, minSeverity));
-  const bySeverity = {
-    low: 0,
-    medium: 0,
-    high: 0,
-    critical: 0
-  };
-
-  for (const finding of findings) {
-    bySeverity[finding.severity] += 1;
-  }
-
-  return {
-    ...result,
-    findings,
-    risk: buildRiskForFindings(findings, result.summary.incomplete),
-    summary: {
-      ...result.summary,
-      totalFindings: findings.length,
-      bySeverity
-    }
-  };
-}
-
-function buildRiskForFindings(findings: Parameters<typeof renderJson>[0]["findings"], incomplete: boolean): Parameters<typeof renderJson>[0]["risk"] {
-  const categories: Parameters<typeof renderJson>[0]["risk"]["categories"] = {};
-  for (const finding of findings) {
-    categories[finding.category] = (categories[finding.category] ?? 0) + 1;
-  }
-  if (incomplete) {
-    return {
-      verdict: "incomplete",
-      reasons: ["One or more high-signal files could not be parsed or read."],
-      categories
-    };
-  }
-  const critical = findings.filter((finding) => finding.severity === "critical").length;
-  const high = findings.filter((finding) => finding.severity === "high").length;
-  const medium = findings.filter((finding) => finding.severity === "medium").length;
-  if (critical > 0 || high > 0) {
-    return {
-      verdict: "block",
-      reasons: [`${critical} critical and ${high} high findings require review before execution.`],
-      categories
-    };
-  }
-  if (medium > 0) {
-    return {
-      verdict: "review",
-      reasons: [`${medium} medium findings should be reviewed before trusting this artifact.`],
-      categories
-    };
-  }
-  return {
-    verdict: "pass",
-    reasons: ["No findings at the current rule settings."],
-    categories
-  };
-}
-
-function isUsageOrConfigError(error: unknown): boolean {
-  const message = (error as Error).message ?? "";
-  return (
-    message.includes("Unsupported format") ||
-    message.includes("Invalid AgentRisk config") ||
-    message.includes("Invalid enum value") ||
-    message.includes("Expected") ||
-    message.includes("ENOENT")
-  );
 }
