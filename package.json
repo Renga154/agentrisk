@@ -1,6 +1,6 @@
 {
   "name": "agentrisk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Zero-execution preflight scanner for untrusted AI-agent and MCP artifacts.",
   "type": "module",
   "homepage": "https://github.com/Renga154/agentrisk#readme",

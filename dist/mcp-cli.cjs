@@ -37573,7 +37573,7 @@ function getRuleSeverity(rule, config2) {
 
 // src/version.ts
 var TOOL_NAME = "agentrisk";
-var VERSION = "0.2.0";
+var VERSION = "0.2.1";
 
 // src/engine/scan-workspace.ts
 async function scanWorkspace(config2, source) {

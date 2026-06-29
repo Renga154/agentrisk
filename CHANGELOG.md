@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Added `agentrisk mcp config` to print copy-paste MCP client configuration JSON.
+- Improved quick-start documentation for first-time CLI and MCP users.
+
 ## 0.2.0
 
 - Added a local stdio MCP server with the `agentrisk_scan` tool.

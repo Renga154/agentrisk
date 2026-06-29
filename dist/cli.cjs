@@ -40612,7 +40612,7 @@ function getRuleSeverity(rule, config2) {
 
 // src/version.ts
 var TOOL_NAME = "agentrisk";
-var VERSION = "0.2.0";
+var VERSION = "0.2.1";
 
 // src/engine/scan-workspace.ts
 async function scanWorkspace(config2, source) {
@@ -41008,8 +41008,20 @@ function formatFinding(finding) {
 
 // src/commands/mcp.ts
 function registerMcpCommand(program3) {
-  program3.command("mcp").description("Run AgentRisk as a local stdio MCP server").action(async () => {
+  const mcp = program3.command("mcp").description("Run AgentRisk as a local stdio MCP server").action(async () => {
     await runStdioMcpServer();
+  });
+  mcp.command("config").description("Print a copy-paste MCP client configuration snippet").option("--server-name <name>", "MCP server name to use in the client config", "agentrisk").option("--package <specifier>", "npm package specifier to run", "agentrisk@latest").action((options) => {
+    const config2 = {
+      mcpServers: {
+        [options.serverName]: {
+          command: "npx",
+          args: ["-y", options.package, "mcp"]
+        }
+      }
+    };
+    process.stdout.write(`${JSON.stringify(config2, null, 2)}
+`);
   });
 }
 

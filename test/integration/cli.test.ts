@@ -96,4 +96,19 @@ describe("CLI contract", () => {
       await fs.rm(temp, { recursive: true, force: true });
     }
   });
+
+  it("prints a copy-paste MCP client config", () => {
+    const result = runCli(["mcp", "config", "--package", "agentrisk@0.2.0"]);
+    const config = parseStdoutJson(result);
+
+    expect(result.status).toBe(0);
+    expect(config).toEqual({
+      mcpServers: {
+        agentrisk: {
+          command: "npx",
+          args: ["-y", "agentrisk@0.2.0", "mcp"]
+        }
+      }
+    });
+  });
 });
