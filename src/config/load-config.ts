@@ -34,16 +34,21 @@ export async function loadConfig(input: LoadConfigInput): Promise<ResolvedConfig
 
   const cliRuleOverrides = buildRuleOverrides(input.rules, input.excludeRules);
 
-  const merged: ResolvedConfig = {
+  const base: ResolvedConfig = {
     ...defaultConfig,
     rootPath,
     color: parseColor(input.color),
     ...compact(fileConfig),
-    ...compact(envConfig),
+    ...compact(envConfig)
+  } as ResolvedConfig;
+
+  const merged: ResolvedConfig = {
+    ...base,
     ...compact({
       profile: input.profile,
-      include: input.include?.length ? input.include : undefined,
-      exclude: input.exclude?.length ? input.exclude : undefined,
+      // CLI globs are documented as "additional", so they extend the base set instead of replacing it.
+      include: input.include?.length ? [...base.include, ...input.include] : undefined,
+      exclude: input.exclude?.length ? [...base.exclude, ...input.exclude] : undefined,
       onlyRules: input.rules?.length ? input.rules : undefined,
       failOn: input.failOn,
       minSeverity: input.minSeverity,

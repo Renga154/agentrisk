@@ -5,7 +5,7 @@ import type { Rule } from "../types.js";
 const remoteExecPatterns = [
   /\b(?:curl|wget)\b[\s\S]{0,160}\|\s*(?:sh|bash|zsh|fish)\b/i,
   /\b(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b[\s\S]{0,200}\|\s*(?:iex|invoke-expression)\b/i,
-  /\bpython(?:3)?\b\s+-c\s+["'][\s\S]{0,120}\burllib|requests|get\(/i
+  /\bpython(?:3)?\b\s+-c\s+["']?[\s\S]{0,160}\b(?:urllib|urlopen|requests|http\.client)\b/i
 ];
 
 export const mcpRemoteFetchExec: Rule = {

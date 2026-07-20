@@ -7,7 +7,7 @@ inputs:
     required: false
     default: "."
   format:
-    description: Output format: terminal, json, markdown, or sarif
+    description: "Output format: terminal, json, markdown, or sarif"
     required: false
     default: "sarif"
   output:
@@ -27,9 +27,15 @@ runs:
   steps:
     - name: Run AgentRisk
       shell: bash
+      env:
+        AGENTRISK_PATH: ${{ inputs.path }}
+        AGENTRISK_FORMAT: ${{ inputs.format }}
+        AGENTRISK_OUTPUT: ${{ inputs.output }}
+        AGENTRISK_FAIL_ON_INPUT: ${{ inputs.fail-on }}
+        AGENTRISK_MIN_SEVERITY_INPUT: ${{ inputs.min-severity }}
       run: |
-        node "$GITHUB_ACTION_PATH/dist/cli.cjs" scan "${{ inputs.path }}" \
-          --format "${{ inputs.format }}" \
-          --output "${{ inputs.output }}" \
-          --fail-on "${{ inputs.fail-on }}" \
-          --min-severity "${{ inputs.min-severity }}"
+        node "$GITHUB_ACTION_PATH/dist/cli.cjs" scan "$AGENTRISK_PATH" \
+          --format "$AGENTRISK_FORMAT" \
+          --output "$AGENTRISK_OUTPUT" \
+          --fail-on "$AGENTRISK_FAIL_ON_INPUT" \
+          --min-severity "$AGENTRISK_MIN_SEVERITY_INPUT"

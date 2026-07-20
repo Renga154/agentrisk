@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import path from "node:path";
 import { loadConfig } from "../../src/config/load-config.js";
+import { isUsageOrConfigError, runScan } from "../../src/engine/run-scan.js";
 import { scanWorkspace } from "../../src/engine/scan-workspace.js";
 import { renderSarif } from "../../src/renderers/sarif.js";
 
@@ -87,5 +88,40 @@ describe("scanWorkspace", () => {
 
     expect(sarif.runs[0].invocations[0].executionSuccessful).toBe(false);
     expect(sarif.runs[0].invocations[0].toolExecutionNotifications[0].message.text).toContain("parse_error");
+  });
+
+  it("does not flag benign MCP args containing 'requests' or 'get(' as remote fetch-exec", async () => {
+    const config = await loadConfig({ rootPath: path.join(fixtures, "benign-mcp-args") });
+    const result = await scanWorkspace(config);
+
+    expect(result.findings.map((finding) => finding.ruleId)).not.toContain("mcp-remote-fetch-exec");
+  });
+
+  it("flags python -c one-liners that fetch and execute remote code", async () => {
+    const config = await loadConfig({ rootPath: path.join(fixtures, "python-fetch-exec") });
+    const result = await scanWorkspace(config);
+
+    expect(result.findings.map((finding) => finding.ruleId)).toContain("mcp-remote-fetch-exec");
+  });
+
+  it("still scans default high-signal files when --include adds a glob", async () => {
+    const config = await loadConfig({
+      rootPath: path.join(fixtures, "risky-mcp"),
+      include: ["**/*.custom"]
+    });
+    const result = await scanWorkspace(config);
+
+    expect(result.findings.map((finding) => finding.ruleId)).toContain("mcp-remote-fetch-exec");
+  });
+});
+
+describe("runScan input validation", () => {
+  it("rejects unknown rule ids as a usage error", async () => {
+    const attempt = runScan({ target: path.join(fixtures, "risky-mcp"), rules: ["mcp-remote-fetch-exc"] });
+
+    await expect(attempt).rejects.toThrow(/Unknown rule id/);
+    await attempt.catch((error) => {
+      expect(isUsageOrConfigError(error)).toBe(true);
+    });
   });
 });

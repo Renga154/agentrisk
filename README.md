@@ -299,7 +299,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v5
-      - uses: Renga154/agentrisk@v0.2.1
+      - uses: Renga154/agentrisk@v0.2.2
         with:
           format: sarif
           output: agentrisk.sarif

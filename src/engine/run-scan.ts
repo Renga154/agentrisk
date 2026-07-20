@@ -7,6 +7,7 @@ import { renderMarkdown } from "../renderers/markdown.js";
 import { renderSarif } from "../renderers/sarif.js";
 import { renderTerminal } from "../renderers/terminal.js";
 import type { ScanResult } from "../artifacts/types.js";
+import { getRuleById } from "../rules/registry.js";
 import { scanWorkspace } from "./scan-workspace.js";
 
 export type OutputFormat = "terminal" | "json" | "sarif" | "markdown" | "auto";
@@ -45,6 +46,7 @@ export interface RunScanResult {
 
 export async function runScan(input: RunScanInput = {}): Promise<RunScanResult> {
   const target = input.target ?? ".";
+  assertKnownRuleIds([...(input.rules ?? []), ...(input.excludeRules ?? [])]);
   let resolvedTarget: Awaited<ReturnType<typeof resolveTarget>> | undefined;
 
   try {
@@ -146,8 +148,16 @@ export function isUsageOrConfigError(error: unknown): boolean {
     message.includes("Invalid AgentRisk config") ||
     message.includes("Invalid enum value") ||
     message.includes("Expected") ||
+    message.includes("Unknown rule id") ||
     message.includes("ENOENT")
   );
+}
+
+function assertKnownRuleIds(ids: string[]): void {
+  const unknown = ids.filter((id) => !getRuleById(id));
+  if (unknown.length > 0) {
+    throw new Error(`Unknown rule id${unknown.length > 1 ? "s" : ""}: ${unknown.join(", ")}. Run "agentrisk rules list" to see available ids.`);
+  }
 }
 
 function buildRiskForFindings(findings: ScanResult["findings"], incomplete: boolean): ScanResult["risk"] {

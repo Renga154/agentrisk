@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "app": {
+      "command": "node",
+      "args": ["server.js", "--max-requests", "10", "--on-budget", "widget.get(x)"]
+    }
+  }
+}

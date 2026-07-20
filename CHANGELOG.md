@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2
+
+- Fixed `action.yml` being invalid YAML (unquoted colon in the `format` input description), which broke the GitHub Action for all published tags.
+- Hardened the GitHub Action by passing inputs to the shell via environment variables instead of inline `${{ }}` expansion.
+- Fixed an operator-precedence bug in the `mcp-remote-fetch-exec` rule: benign command lines containing `requests` or `get(` were flagged as critical, while unquoted `python -c` download-and-exec one-liners were missed.
+- `--include` / `--exclude` globs now extend the default file sets instead of silently replacing them, matching the documented "additional glob" behavior.
+- Unknown rule ids passed to `--rule` / `--exclude-rule` now fail with exit code 2 instead of silently disabling every rule and passing.
+
 ## 0.2.1
 
 - Added `agentrisk mcp config` to print copy-paste MCP client configuration JSON.

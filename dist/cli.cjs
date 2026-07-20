@@ -25951,16 +25951,20 @@ async function loadConfig(input) {
     minSeverity: parseStringEnv("AGENTRISK_MIN_SEVERITY")
   };
   const cliRuleOverrides = buildRuleOverrides(input.rules, input.excludeRules);
-  const merged = {
+  const base = {
     ...defaultConfig,
     rootPath,
     color: parseColor(input.color),
     ...compact(fileConfig),
-    ...compact(envConfig),
+    ...compact(envConfig)
+  };
+  const merged = {
+    ...base,
     ...compact({
       profile: input.profile,
-      include: input.include?.length ? input.include : void 0,
-      exclude: input.exclude?.length ? input.exclude : void 0,
+      // CLI globs are documented as "additional", so they extend the base set instead of replacing it.
+      include: input.include?.length ? [...base.include, ...input.include] : void 0,
+      exclude: input.exclude?.length ? [...base.exclude, ...input.exclude] : void 0,
       onlyRules: input.rules?.length ? input.rules : void 0,
       failOn: input.failOn,
       minSeverity: input.minSeverity,
@@ -39761,7 +39765,7 @@ var instructionSecretExfiltration = {
 var remoteExecPatterns = [
   /\b(?:curl|wget)\b[\s\S]{0,160}\|\s*(?:sh|bash|zsh|fish)\b/i,
   /\b(?:iwr|irm|invoke-webrequest|invoke-restmethod)\b[\s\S]{0,200}\|\s*(?:iex|invoke-expression)\b/i,
-  /\bpython(?:3)?\b\s+-c\s+["'][\s\S]{0,120}\burllib|requests|get\(/i
+  /\bpython(?:3)?\b\s+-c\s+["']?[\s\S]{0,160}\b(?:urllib|urlopen|requests|http\.client)\b/i
 ];
 var mcpRemoteFetchExec = {
   id: "mcp-remote-fetch-exec",
@@ -40612,7 +40616,7 @@ function getRuleSeverity(rule, config2) {
 
 // src/version.ts
 var TOOL_NAME = "agentrisk";
-var VERSION = "0.2.1";
+var VERSION = "0.2.2";
 
 // src/engine/scan-workspace.ts
 async function scanWorkspace(config2, source) {
@@ -40711,6 +40715,7 @@ function buildRiskSummary(findings, incomplete) {
 // src/engine/run-scan.ts
 async function runScan(input = {}) {
   const target = input.target ?? ".";
+  assertKnownRuleIds([...input.rules ?? [], ...input.excludeRules ?? []]);
   let resolvedTarget;
   try {
     resolvedTarget = await resolveTarget(target, {
@@ -40797,7 +40802,13 @@ function filterResultBySeverity(result, minSeverity) {
 }
 function isUsageOrConfigError(error2) {
   const message = error2.message ?? "";
-  return message.includes("Unsupported format") || message.includes("Invalid AgentRisk config") || message.includes("Invalid enum value") || message.includes("Expected") || message.includes("ENOENT");
+  return message.includes("Unsupported format") || message.includes("Invalid AgentRisk config") || message.includes("Invalid enum value") || message.includes("Expected") || message.includes("Unknown rule id") || message.includes("ENOENT");
+}
+function assertKnownRuleIds(ids) {
+  const unknown2 = ids.filter((id) => !getRuleById(id));
+  if (unknown2.length > 0) {
+    throw new Error(`Unknown rule id${unknown2.length > 1 ? "s" : ""}: ${unknown2.join(", ")}. Run "agentrisk rules list" to see available ids.`);
+  }
 }
 function buildRiskForFindings(findings, incomplete) {
   const categories = {};
