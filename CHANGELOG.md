@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.3
+
+- Added a cumulative extracted-size cap (10x `--max-download-size`) when unpacking GitHub, npm, and archive targets, guarding against decompression bombs.
+- `--min-severity` no longer rewrites the report verdict: the rendered verdict now always reflects the full scan, staying consistent with `--fail-on` and the exit code.
+- Added `--no-strict-parse` so best-effort parsing is reachable from the CLI, and aligned the MCP tool's `strictParse` default with the CLI default (`true`, fail-closed).
+- Nonexistent scan targets now exit with code 2 (usage error) instead of 3.
+- CI now tests Node 20 and 22, sets least-privilege workflow permissions, and pins actions to commit SHAs.
+- Dropped empty type-declaration files from the build output; ship `CHANGELOG.md` in the npm package.
+- README: the sample output now matches a real `examples/risky-workspace` scan, exit codes moved to their own section, and stale "when this repository is public" disclosure wording removed.
+
 ## 0.2.2
 
 - Fixed `action.yml` being invalid YAML (unquoted colon in the `format` input description), which broke the GitHub Action for all published tags.

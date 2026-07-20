@@ -25,7 +25,7 @@ const scanToolInputSchema = {
   maxDownloadSize: z.number().int().positive().default(50_000_000).describe("Maximum bytes to download for remote, GitHub, npm, or archive targets."),
   respectGitignore: z.boolean().default(false).describe("Apply the target .gitignore during discovery. Off by default so high-signal files cannot be hidden."),
   followSymlinks: z.boolean().default(false).describe("Follow symlinks during discovery."),
-  strictParse: z.boolean().default(false).describe("Drop malformed JSON artifacts from rule evaluation instead of keeping best-effort diagnostics."),
+  strictParse: z.boolean().default(true).describe("Drop malformed JSON artifacts from rule evaluation instead of keeping best-effort diagnostics."),
   keepTemp: z.boolean().default(false).describe("Keep extracted temporary target directories for debugging."),
   reportFormat: z.enum(["markdown", "json", "sarif"]).default("markdown").describe("Rendered report format to include when includeReportText is true."),
   maxFindings: z.number().int().min(1).max(200).default(50).describe("Maximum findings to summarize in the text response."),

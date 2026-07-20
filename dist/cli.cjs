@@ -39243,7 +39243,7 @@ async function resolveNpmTarget(input, options) {
 }
 async function resolveLocalArchive(input, absolutePath, options) {
   const workspace = await createTempWorkspace(options.keepTemp);
-  await extractArchive(absolutePath, workspace.rootPath);
+  await extractArchive(absolutePath, workspace.rootPath, options.maxDownloadSize * 10);
   const scanRoot = await selectArchiveScanRoot(workspace.rootPath);
   return {
     rootPath: scanRoot,
@@ -39260,7 +39260,7 @@ async function resolveArchiveTarget(source, options) {
   const workspace = await createTempWorkspace(options.keepTemp);
   const archivePath = import_node_path11.default.join(workspace.rootPath, "target.tgz");
   await downloadToFile(source.resolved, archivePath, options.maxDownloadSize);
-  await extractArchive(archivePath, workspace.rootPath);
+  await extractArchive(archivePath, workspace.rootPath, options.maxDownloadSize * 10);
   await import_promises3.default.rm(archivePath, { force: true });
   const scanRoot = await selectArchiveScanRoot(workspace.rootPath);
   return {
@@ -39305,17 +39305,30 @@ async function downloadToFile(url, destination, maxBytes) {
   });
   await (0, import_promises4.pipeline)(import_node_stream2.Readable.fromWeb(response.body), limiter, (0, import_node_fs7.createWriteStream)(destination));
 }
-async function extractArchive(archivePath, destination) {
+async function extractArchive(archivePath, destination, maxExtractedBytes) {
   let entries = 0;
+  let extractedBytes = 0;
+  let overflow;
   const maxEntries = 3e4;
   await uo({
     file: archivePath,
     cwd: destination,
     preservePaths: false,
+    // Throwing inside tar's filter callback stalls the pipeline, so limit breaches
+    // set `overflow` and skip remaining entries; the error is raised afterwards.
     filter(entryPath, entry) {
+      if (overflow) {
+        return false;
+      }
       entries += 1;
       if (entries > maxEntries) {
-        throw new Error(`Archive has more than ${maxEntries} entries`);
+        overflow = `Archive has more than ${maxEntries} entries`;
+        return false;
+      }
+      extractedBytes += "size" in entry && typeof entry.size === "number" ? entry.size : 0;
+      if (extractedBytes > maxExtractedBytes) {
+        overflow = `Archive exceeded max extracted size (${maxExtractedBytes} bytes); possible decompression bomb`;
+        return false;
       }
       if (import_node_path11.default.isAbsolute(entryPath) || entryPath.split(/[\\/]/).includes("..")) {
         return false;
@@ -39326,6 +39339,9 @@ async function extractArchive(archivePath, destination) {
       return true;
     }
   });
+  if (overflow) {
+    throw new Error(overflow);
+  }
 }
 async function selectArchiveScanRoot(rootPath) {
   const entries = await import_promises3.default.readdir(rootPath, { withFileTypes: true });
@@ -40616,7 +40632,7 @@ function getRuleSeverity(rule, config2) {
 
 // src/version.ts
 var TOOL_NAME = "agentrisk";
-var VERSION = "0.2.2";
+var VERSION = "0.2.3";
 
 // src/engine/scan-workspace.ts
 async function scanWorkspace(config2, source) {
@@ -40792,7 +40808,9 @@ function filterResultBySeverity(result, minSeverity) {
   return {
     ...result,
     findings,
-    risk: buildRiskForFindings(findings, result.summary.incomplete),
+    // minSeverity only trims the rendered findings; the verdict must stay consistent
+    // with the full scan (and therefore with --fail-on and the exit code).
+    risk: result.risk,
     summary: {
       ...result.summary,
       totalFindings: findings.length,
@@ -40802,48 +40820,13 @@ function filterResultBySeverity(result, minSeverity) {
 }
 function isUsageOrConfigError(error2) {
   const message = error2.message ?? "";
-  return message.includes("Unsupported format") || message.includes("Invalid AgentRisk config") || message.includes("Invalid enum value") || message.includes("Expected") || message.includes("Unknown rule id") || message.includes("ENOENT");
+  return message.includes("Unsupported format") || message.includes("Invalid AgentRisk config") || message.includes("Invalid enum value") || message.includes("Expected") || message.includes("Unknown rule id") || message.includes("Target not found") || message.includes("ENOENT");
 }
 function assertKnownRuleIds(ids) {
   const unknown2 = ids.filter((id) => !getRuleById(id));
   if (unknown2.length > 0) {
     throw new Error(`Unknown rule id${unknown2.length > 1 ? "s" : ""}: ${unknown2.join(", ")}. Run "agentrisk rules list" to see available ids.`);
   }
-}
-function buildRiskForFindings(findings, incomplete) {
-  const categories = {};
-  for (const finding of findings) {
-    categories[finding.category] = (categories[finding.category] ?? 0) + 1;
-  }
-  if (incomplete) {
-    return {
-      verdict: "incomplete",
-      reasons: ["One or more high-signal files could not be parsed or read."],
-      categories
-    };
-  }
-  const critical = findings.filter((finding) => finding.severity === "critical").length;
-  const high = findings.filter((finding) => finding.severity === "high").length;
-  const medium = findings.filter((finding) => finding.severity === "medium").length;
-  if (critical > 0 || high > 0) {
-    return {
-      verdict: "block",
-      reasons: [`${critical} critical and ${high} high findings require review before execution.`],
-      categories
-    };
-  }
-  if (medium > 0) {
-    return {
-      verdict: "review",
-      reasons: [`${medium} medium findings should be reviewed before trusting this artifact.`],
-      categories
-    };
-  }
-  return {
-    verdict: "pass",
-    reasons: ["No findings at the current rule settings."],
-    categories
-  };
 }
 
 // src/mcp/server.ts
@@ -40862,7 +40845,7 @@ var scanToolInputSchema = {
   maxDownloadSize: external_exports.number().int().positive().default(5e7).describe("Maximum bytes to download for remote, GitHub, npm, or archive targets."),
   respectGitignore: external_exports.boolean().default(false).describe("Apply the target .gitignore during discovery. Off by default so high-signal files cannot be hidden."),
   followSymlinks: external_exports.boolean().default(false).describe("Follow symlinks during discovery."),
-  strictParse: external_exports.boolean().default(false).describe("Drop malformed JSON artifacts from rule evaluation instead of keeping best-effort diagnostics."),
+  strictParse: external_exports.boolean().default(true).describe("Drop malformed JSON artifacts from rule evaluation instead of keeping best-effort diagnostics."),
   keepTemp: external_exports.boolean().default(false).describe("Keep extracted temporary target directories for debugging."),
   reportFormat: external_exports.enum(["markdown", "json", "sarif"]).default("markdown").describe("Rendered report format to include when includeReportText is true."),
   maxFindings: external_exports.number().int().min(1).max(200).default(50).describe("Maximum findings to summarize in the text response."),
@@ -41102,7 +41085,7 @@ function registerRulesCommand(program3) {
 // src/commands/scan.ts
 var import_promises7 = __toESM(require("fs/promises"), 1);
 function registerScanCommand(program3) {
-  program3.command("scan").description("Scan an AI-agent workspace without executing target code").argument("[path]", "workspace path to scan", ".").option("-c, --config <path>", "path to agentrisk config JSON").option("--profile <profile>", "rule profile: recommended or strict").option("--rule <id>", "run only this rule id; repeatable", collect, []).option("--exclude-rule <id>", "disable a rule id", collect, []).option("--include <glob>", "additional include glob", collect, []).option("--exclude <glob>", "additional exclude glob", collect, []).option("-f, --format <format>", "terminal, json, sarif, markdown, or auto", "auto").option("-o, --output <path>", "write report to a file").option("--fail-on <severity>", "exit 1 when findings are at least this severity", "high").option("--min-severity <severity>", "only render findings at least this severity", "low").option("--max-file-size <bytes>", "skip files larger than this size in bytes").option("--max-download-size <bytes>", "maximum bytes to download for remote, GitHub, npm, or archive targets", "50000000").option("--github-ref <ref>", "Git ref to use for GitHub targets").option("--keep-temp", "keep extracted temporary target directories for debugging").option("--gitignore", "apply target .gitignore during discovery (off by default)").option("--follow-symlinks", "follow symlinks during discovery").option("--strict-parse", "drop malformed JSON artifacts from rule evaluation").option("--color <mode>", "auto, always, or never", "auto").action(async (targetPath, options) => {
+  program3.command("scan").description("Scan an AI-agent workspace without executing target code").argument("[path]", "workspace path to scan", ".").option("-c, --config <path>", "path to agentrisk config JSON").option("--profile <profile>", "rule profile: recommended or strict").option("--rule <id>", "run only this rule id; repeatable", collect, []).option("--exclude-rule <id>", "disable a rule id", collect, []).option("--include <glob>", "additional include glob", collect, []).option("--exclude <glob>", "additional exclude glob", collect, []).option("-f, --format <format>", "terminal, json, sarif, markdown, or auto", "auto").option("-o, --output <path>", "write report to a file").option("--fail-on <severity>", "exit 1 when findings are at least this severity", "high").option("--min-severity <severity>", "only render findings at least this severity", "low").option("--max-file-size <bytes>", "skip files larger than this size in bytes").option("--max-download-size <bytes>", "maximum bytes to download for remote, GitHub, npm, or archive targets", "50000000").option("--github-ref <ref>", "Git ref to use for GitHub targets").option("--keep-temp", "keep extracted temporary target directories for debugging").option("--gitignore", "apply target .gitignore during discovery (off by default)").option("--follow-symlinks", "follow symlinks during discovery").option("--strict-parse", "drop malformed JSON artifacts from rule evaluation (default)").option("--no-strict-parse", "keep malformed JSON artifacts as best-effort diagnostics").option("--color <mode>", "auto, always, or never", "auto").action(async (targetPath, options) => {
     try {
       const scan = await runScan({
         target: targetPath,

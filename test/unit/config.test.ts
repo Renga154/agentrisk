@@ -13,6 +13,14 @@ describe("loadConfig", () => {
     expect(config.rules["mcp-remote-fetch-exec"]).toBe("off");
   });
 
+  it("defaults strictParse to true and honors an explicit false", async () => {
+    const defaulted = await loadConfig({ rootPath: path.resolve("test/fixtures/risky-mcp") });
+    const bestEffort = await loadConfig({ rootPath: path.resolve("test/fixtures/risky-mcp"), strictParse: false });
+
+    expect(defaulted.strictParse).toBe(true);
+    expect(bestEffort.strictParse).toBe(false);
+  });
+
   it("appends CLI include/exclude globs instead of replacing the defaults", async () => {
     const config = await loadConfig({
       rootPath: path.resolve("test/fixtures/risky-mcp"),

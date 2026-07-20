@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import * as tar from "tar";
 import { loadConfig } from "../../src/config/load-config.js";
 import { isUsageOrConfigError, runScan } from "../../src/engine/run-scan.js";
 import { scanWorkspace } from "../../src/engine/scan-workspace.js";
@@ -123,5 +126,37 @@ describe("runScan input validation", () => {
     await attempt.catch((error) => {
       expect(isUsageOrConfigError(error)).toBe(true);
     });
+  });
+
+  it("keeps the rendered verdict consistent with the exit code when minSeverity hides findings", async () => {
+    const scan = await runScan({
+      target: path.join(fixtures, "medium-only"),
+      format: "json",
+      minSeverity: "critical",
+      failOn: "medium"
+    });
+
+    const report = JSON.parse(scan.rendered);
+    expect(scan.exitCode).toBe(1);
+    expect(report.findings).toHaveLength(0);
+    expect(report.risk.verdict).toBe("review");
+  });
+});
+
+describe("archive extraction limits", () => {
+  it("rejects archives whose extracted size exceeds the cap", { timeout: 30_000 }, async () => {
+    const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "agentrisk-bomb-"));
+    try {
+      await fs.mkdir(path.join(workDir, "payload"));
+      await fs.writeFile(path.join(workDir, "payload", "zeros.bin"), Buffer.alloc(20_000_000));
+      const archivePath = path.join(workDir, "bomb.tgz");
+      await tar.create({ gzip: true, file: archivePath, cwd: workDir }, ["payload"]);
+
+      await expect(
+        runScan({ target: archivePath, format: "json", maxDownloadSize: 1_000_000 })
+      ).rejects.toThrow(/max extracted size/);
+    } finally {
+      await fs.rm(workDir, { recursive: true, force: true });
+    }
   });
 });

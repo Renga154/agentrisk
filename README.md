@@ -23,11 +23,11 @@ npx --yes agentrisk@latest mcp config
 
 ```text
 AgentRisk scan
-Source: github owner/suspicious-agent-repo
-Root: /repo
+Source: local-directory examples/risky-workspace
+Root: /path/to/agentrisk/examples/risky-workspace
 Files: 3 scanned, 3 matched
 Verdict: BLOCK
-Findings: 3 critical, 4 high, 2 medium
+Findings: 3 critical, 4 high, 1 medium
 
 CRITICAL
   mcp-remote-fetch-exec [high]
@@ -241,7 +241,7 @@ Example tool input:
 
 MCP mode keeps the same safety model as the CLI: it may read local files and download explicitly requested GitHub/npm/archive targets, but it does not execute target code, run package scripts, install dependencies, or connect to target MCP servers.
 
-Exit codes:
+## Exit Codes
 
 - `0`: scan completed and no finding met `--fail-on`
 - `1`: scan completed and at least one finding met `--fail-on`, or the scan was incomplete
@@ -299,7 +299,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v5
-      - uses: Renga154/agentrisk@v0.2.2
+      - uses: Renga154/agentrisk@v0.2.3
         with:
           format: sarif
           output: agentrisk.sarif
@@ -382,7 +382,7 @@ npm run check
 
 ## Responsible Disclosure
 
-If you believe AgentRisk misses a dangerous pattern or reports unsafe advice, please open a private security advisory on GitHub when the repository is public. For normal false positives, open an issue with a minimal reproducible fixture.
+If you believe AgentRisk misses a dangerous pattern or reports unsafe advice, please open a private security advisory on GitHub. For normal false positives, open an issue with a minimal reproducible fixture.
 
 ## License
 

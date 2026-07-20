@@ -23,7 +23,8 @@ export function registerScanCommand(program: Command): void {
     .option("--keep-temp", "keep extracted temporary target directories for debugging")
     .option("--gitignore", "apply target .gitignore during discovery (off by default)")
     .option("--follow-symlinks", "follow symlinks during discovery")
-    .option("--strict-parse", "drop malformed JSON artifacts from rule evaluation")
+    .option("--strict-parse", "drop malformed JSON artifacts from rule evaluation (default)")
+    .option("--no-strict-parse", "keep malformed JSON artifacts as best-effort diagnostics")
     .option("--color <mode>", "auto, always, or never", "auto")
     .action(async (targetPath: string, options) => {
       try {

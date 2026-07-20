@@ -132,7 +132,9 @@ export function filterResultBySeverity(result: ScanResult, minSeverity: Severity
   return {
     ...result,
     findings,
-    risk: buildRiskForFindings(findings, result.summary.incomplete),
+    // minSeverity only trims the rendered findings; the verdict must stay consistent
+    // with the full scan (and therefore with --fail-on and the exit code).
+    risk: result.risk,
     summary: {
       ...result.summary,
       totalFindings: findings.length,
@@ -149,6 +151,7 @@ export function isUsageOrConfigError(error: unknown): boolean {
     message.includes("Invalid enum value") ||
     message.includes("Expected") ||
     message.includes("Unknown rule id") ||
+    message.includes("Target not found") ||
     message.includes("ENOENT")
   );
 }
@@ -158,40 +161,4 @@ function assertKnownRuleIds(ids: string[]): void {
   if (unknown.length > 0) {
     throw new Error(`Unknown rule id${unknown.length > 1 ? "s" : ""}: ${unknown.join(", ")}. Run "agentrisk rules list" to see available ids.`);
   }
-}
-
-function buildRiskForFindings(findings: ScanResult["findings"], incomplete: boolean): ScanResult["risk"] {
-  const categories: ScanResult["risk"]["categories"] = {};
-  for (const finding of findings) {
-    categories[finding.category] = (categories[finding.category] ?? 0) + 1;
-  }
-  if (incomplete) {
-    return {
-      verdict: "incomplete",
-      reasons: ["One or more high-signal files could not be parsed or read."],
-      categories
-    };
-  }
-  const critical = findings.filter((finding) => finding.severity === "critical").length;
-  const high = findings.filter((finding) => finding.severity === "high").length;
-  const medium = findings.filter((finding) => finding.severity === "medium").length;
-  if (critical > 0 || high > 0) {
-    return {
-      verdict: "block",
-      reasons: [`${critical} critical and ${high} high findings require review before execution.`],
-      categories
-    };
-  }
-  if (medium > 0) {
-    return {
-      verdict: "review",
-      reasons: [`${medium} medium findings should be reviewed before trusting this artifact.`],
-      categories
-    };
-  }
-  return {
-    verdict: "pass",
-    reasons: ["No findings at the current rule settings."],
-    categories
-  };
 }

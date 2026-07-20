@@ -23,11 +23,11 @@ npx --yes agentrisk@latest mcp config
 
 ```text
 AgentRisk scan
-Source: github owner/suspicious-agent-repo
-Root: /repo
+Source: local-directory examples/risky-workspace
+Root: /path/to/agentrisk/examples/risky-workspace
 Files: 3 scanned, 3 matched
 Verdict: BLOCK
-Findings: 3 critical, 4 high, 2 medium
+Findings: 3 critical, 4 high, 1 medium
 
 CRITICAL
   mcp-remote-fetch-exec [high]
@@ -241,7 +241,7 @@ tool input 例:
 
 MCP モードでも安全モデルは CLI と同じです。ローカルファイルを読み、明示的に指定された GitHub / npm / archive target をダウンロードすることはありますが、対象コードの実行、package script の実行、依存関係のインストール、対象 MCP サーバーへの接続は行いません。
 
-終了コード:
+## 終了コード
 
 - `0`: スキャン完了、かつ `--fail-on` 以上の finding なし
 - `1`: スキャン完了かつ `--fail-on` 以上の finding あり、またはスキャンが不完全
@@ -299,7 +299,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v5
-      - uses: Renga154/agentrisk@v0.2.2
+      - uses: Renga154/agentrisk@v0.2.3
         with:
           format: sarif
           output: agentrisk.sarif
@@ -382,7 +382,7 @@ npm run check
 
 ## Responsible Disclosure
 
-AgentRisk が危険なパターンを見逃している、または安全でない助言をしていると思われる場合は、リポジトリ公開後に GitHub の private security advisory を開いてください。通常の false positive は、最小再現 fixture 付きで issue を開いてください。
+AgentRisk が危険なパターンを見逃している、または安全でない助言をしていると思われる場合は、GitHub の private security advisory から報告してください。通常の false positive は、最小再現 fixture 付きで issue を開いてください。
 
 ## License
 

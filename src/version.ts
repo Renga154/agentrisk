@@ -1,2 +1,2 @@
 export const TOOL_NAME = "agentrisk";
-export const VERSION = "0.2.2";
+export const VERSION = "0.2.3";

@@ -95,7 +95,7 @@ async function resolveNpmTarget(input: string, options: TargetOptions): Promise<
 
 async function resolveLocalArchive(input: string, absolutePath: string, options: TargetOptions): Promise<ResolvedTarget> {
   const workspace = await createTempWorkspace(options.keepTemp);
-  await extractArchive(absolutePath, workspace.rootPath);
+  await extractArchive(absolutePath, workspace.rootPath, options.maxDownloadSize * 10);
   const scanRoot = await selectArchiveScanRoot(workspace.rootPath);
   return {
     rootPath: scanRoot,
@@ -113,7 +113,7 @@ async function resolveArchiveTarget(source: TargetSource, options: TargetOptions
   const workspace = await createTempWorkspace(options.keepTemp);
   const archivePath = path.join(workspace.rootPath, "target.tgz");
   await downloadToFile(source.resolved, archivePath, options.maxDownloadSize);
-  await extractArchive(archivePath, workspace.rootPath);
+  await extractArchive(archivePath, workspace.rootPath, options.maxDownloadSize * 10);
   await fs.rm(archivePath, { force: true });
   const scanRoot = await selectArchiveScanRoot(workspace.rootPath);
 
@@ -164,18 +164,31 @@ async function downloadToFile(url: string, destination: string, maxBytes: number
   await pipeline(Readable.fromWeb(response.body), limiter, createWriteStream(destination));
 }
 
-async function extractArchive(archivePath: string, destination: string): Promise<void> {
+async function extractArchive(archivePath: string, destination: string, maxExtractedBytes: number): Promise<void> {
   let entries = 0;
+  let extractedBytes = 0;
+  let overflow: string | undefined;
   const maxEntries = 30_000;
 
   await extractTar({
     file: archivePath,
     cwd: destination,
     preservePaths: false,
+    // Throwing inside tar's filter callback stalls the pipeline, so limit breaches
+    // set `overflow` and skip remaining entries; the error is raised afterwards.
     filter(entryPath: string, entry: ReadEntry | Stats) {
+      if (overflow) {
+        return false;
+      }
       entries += 1;
       if (entries > maxEntries) {
-        throw new Error(`Archive has more than ${maxEntries} entries`);
+        overflow = `Archive has more than ${maxEntries} entries`;
+        return false;
+      }
+      extractedBytes += "size" in entry && typeof entry.size === "number" ? entry.size : 0;
+      if (extractedBytes > maxExtractedBytes) {
+        overflow = `Archive exceeded max extracted size (${maxExtractedBytes} bytes); possible decompression bomb`;
+        return false;
       }
       if (path.isAbsolute(entryPath) || entryPath.split(/[\\/]/).includes("..")) {
         return false;
@@ -186,6 +199,10 @@ async function extractArchive(archivePath: string, destination: string): Promise
       return true;
     }
   });
+
+  if (overflow) {
+    throw new Error(overflow);
+  }
 }
 
 async function selectArchiveScanRoot(rootPath: string): Promise<string> {
